@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FutbalTurnaje.sk - Vytváraj a spravuj futbalové turnaje naživo</title>
+  <meta name="description" content="Bezplatný online nástroj na vytváranie, organizovanie a live sledovanie futbalových turnajov. Podporuje formát ligy aj vyraďovacieho pavúka s real-time aktualizáciami.">
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Hlavný CSS súbor -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- NAVIGÁCIA -->
+  <header class="app-header">
+    <div class="header-container">
+      <a href="#home" class="logo">
+        <svg class="logo-icon" viewBox="0 0 24 24" width="28" height="28">
+          <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" fill="none" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M2 12h20M12 2v20" fill="none" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+        <span>Futbal<span class="highlight">Turnaje</span></span>
+      </a>
+      <nav class="nav-links">
+        <a href="#home" class="nav-link active" id="nav-home">Turnaje</a>
+        <a href="#create" class="btn btn-primary" id="nav-create">
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          Vytvoriť turnaj
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- HLAVNÝ OBSAH -->
+  <main class="app-main">
+    <div class="container">
+
+      <!-- ================= UPOZORNENIA (TOASTS) ================= -->
+      <div id="toast-container" class="toast-container"></div>
+
+      <!-- ================= POHĽAD 1: ZOZNAM TURNAJOV (DOMOV) ================= -->
+      <section id="home-view" class="view-section active">
+        <div class="hero-section">
+          <h1>Organizuj a sleduj futbalové turnaje <span class="gradient-text">naživo</span></h1>
+          <p class="hero-lead">Vytvor turnaj za pár sekúnd, pridaj tímy a spravuj výsledky online. Diváci môžu sledovať priebeh zápasov, tabuľky a pavúka v reálnom čase odkiaľkoľvek.</p>
+          <div class="hero-actions">
+            <a href="#create" class="btn btn-primary btn-lg">Vytvoriť nový turnaj</a>
+            <a href="#active-tournaments" class="btn btn-secondary btn-lg scroll-link">Prehliadať udalosti</a>
+          </div>
+        </div>
+
+        <div id="active-tournaments" class="tournaments-section">
+          <div class="section-header">
+            <h2>Aktuálne turnaje a udalosti</h2>
+            <div class="filter-bar">
+              <input type="text" id="search-input" placeholder="Hľadať podľa názvu/miesta..." class="form-input search-input">
+              <input type="text" id="category-filter" placeholder="Filtrovať kategóriu (napr. U15)..." class="form-input search-input" style="max-width: 200px;">
+              <select id="format-filter" class="form-input filter-select">
+                <option value="all">Všetky formáty</option>
+                <option value="league">Liga (každý s každým)</option>
+                <option value="knockout">Vyraďovačka (pavúk)</option>
+                <option value="groups">Skupiny + Play-off</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Spinner pre načítanie -->
+          <div id="loading-spinner" class="spinner-container">
+            <div class="spinner"></div>
+            <p>Načítavam turnaje z online databázy...</p>
+          </div>
+
+          <!-- Prázdny stav -->
+          <div id="no-tournaments" class="empty-state hidden">
+            <svg viewBox="0 0 24 24" width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            <h3>Zatiaľ žiadne turnaje</h3>
+            <p>Buď prvý, kto vytvorí futbalový turnaj a zdieľa ho s ostatnými!</p>
+            <a href="#create" class="btn btn-primary">Vytvoriť turnaj</a>
+          </div>
+
+          <!-- Mriežka turnajov -->
+          <div id="tournaments-grid" class="tournaments-grid">
+            <!-- Dynamicky naplnené pomocou JS -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= POHĽAD 2: VYTVORENIE TURNAJA ================= -->
+      <section id="create-view" class="view-section hidden">
+        <div class="card create-card">
+          <div class="create-header">
+            <h2>Nový turnaj</h2>
+            <div class="steps-indicator">
+              <span class="step-indicator active" id="step-ind-1">1. Základné info</span>
+              <span class="step-line"></span>
+              <span class="step-indicator" id="step-ind-2">2. Tímy</span>
+              <span class="step-line"></span>
+              <span class="step-indicator" id="step-ind-3">3. Žrebovanie</span>
+              <span class="step-line"></span>
+              <span class="step-indicator" id="step-ind-4">4. Hotovo</span>
+            </div>
+          </div>
+
+          <form id="create-tournament-form" onsubmit="event.preventDefault();">
+            
+            <!-- KROK 1: Detaily turnaja -->
+            <div class="wizard-step" id="wizard-step-1">
+              <div class="form-group-grid">
+                <div class="form-group">
+                  <label for="t-name">Názov turnaja *</label>
+                  <input type="text" id="t-name" required placeholder="napr. Letný Pohár Obce 2026" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="t-format">Formát turnaja *</label>
+                  <select id="t-format" class="form-input">
+                    <option value="league">Liga (Round Robin - každý s každým)</option>
+                    <option value="knockout">Vyraďovačka (Single Elimination - pavúk)</option>
+                    <option value="groups_2_top2">Skupiny: 2 skupiny -> Top 2 do Semifinále</option>
+                    <option value="groups_2_all">Skupiny: 2 skupiny -> Všetci do Štvrťfinále (presne 8 tímov)</option>
+                    <option value="groups_4_top2">Skupiny: 4 skupiny -> Top 2 do Štvrťfinále</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group-grid">
+                <div class="form-group">
+                  <label for="t-location">Miesto konania *</label>
+                  <input type="text" id="t-location" required placeholder="napr. Štadión FK Šport, Bratislava" class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="t-date">Dátum konania *</label>
+                  <input type="date" id="t-date" required class="form-input">
+                </div>
+              </div>
+
+              <div class="form-group-grid">
+                <div class="form-group">
+                  <label for="t-category">Veková kategória *</label>
+                  <input type="text" id="t-category" required placeholder="napr. U15, U12, Muži" value="U15" class="form-input">
+                </div>
+                <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 30px;">
+                  <input type="checkbox" id="t-looking-for-teams" style="width: 20px; height: 20px; cursor: pointer;">
+                  <label for="t-looking-for-teams" style="cursor: pointer; font-weight: 600; margin-bottom: 0;">Hľadáme tímy (otvorené prihlášky)</label>
+                </div>
+              </div>
+
+              <div class="form-group-grid">
+                <div class="form-group">
+                  <label for="t-match-duration">Dĺžka zápasu (minúty) *</label>
+                  <input type="number" id="t-match-duration" value="15" min="1" max="90" required class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="t-emoji">Emoji logo turnaja *</label>
+                  <select id="t-emoji" class="form-input select-emoji">
+                    <option value="🏆">🏆 Pohár (Trophy)</option>
+                    <option value="⚽">⚽ Futbalová lopta</option>
+                    <option value="🥇">🥇 Zlatá medaila</option>
+                    <option value="🌟">🌟 Hviezda</option>
+                    <option value="🔥">🔥 Oheň</option>
+                    <option value="⚔️">⚔️ Zbrane (Súboj)</option>
+                    <option value="👑">👑 Koruna</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group-grid">
+                <div class="form-group">
+                  <label for="t-start-time">Čas začiatku turnaja *</label>
+                  <input type="time" id="t-start-time" value="09:00" required class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="t-interval">Interval štartu zápasov (minúty) *</label>
+                  <input type="number" id="t-interval" value="20" min="5" max="120" required class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="t-pitches">Počet ihrísk *</label>
+                  <input type="number" id="t-pitches" value="1" min="1" max="5" required class="form-input">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label for="t-description">Popis turnaja</label>
+                <textarea id="t-description" rows="3" placeholder="Sem napíš podrobnosti o turnaji, pravidlách, cenách atď..." class="form-input text-area"></textarea>
+              </div>
+
+              <div class="wizard-footer">
+                <a href="#home" class="btn btn-secondary">Zrušiť</a>
+                <button type="button" class="btn btn-primary" id="btn-next-to-teams">
+                  Pokračovať na Tímy
+                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- KROK 2: Správa tímov -->
+            <div class="wizard-step hidden" id="wizard-step-2">
+              <div class="teams-setup-desc">
+                <p>Pridaj tímy, ktoré sa zúčastnia turnaja. Formát vyraďovačky vyžaduje presne <strong>4, 8 alebo 16 tímov</strong>. Liga vyžaduje minimálne <strong>3 tímy</strong>.</p>
+              </div>
+
+              <div class="team-input-row">
+                <div class="emoji-picker-container">
+                  <select id="team-emoji-select" class="form-input team-emoji-select">
+                    <option value="🦁">🦁</option><option value="🐯">🐯</option><option value="🦅">🦅</option>
+                    <option value="🐺">🐺</option><option value="🐻">🐻</option><option value="🐂">🐂</option>
+                    <option value="🐉">🐉</option><option value="🦈">🦈</option><option value="🦊">🦊</option>
+                    <option value="🐍">🐍</option><option value="⚡">⚡</option><option value="🔥">🔥</option>
+                    <option value="☄️">☄️</option><option value="🛡️">🛡️</option><option value="⚔️">⚔️</option>
+                    <option value="⚽">⚽</option><option value="🚀">🚀</option><option value="💎">💎</option>
+                  </select>
+                </div>
+                <input type="text" id="team-name-input" placeholder="Názov tímu (napr. FC Barcelona, Lokomotíva)" class="form-input team-name-input">
+                <button type="button" id="btn-add-team" class="btn btn-secondary">Pridať tím</button>
+              </div>
+
+              <div class="teams-container">
+                <h4 class="sub-title">Zoznam pridaných tímov (<span id="team-count">0</span>)</h4>
+                <div id="teams-list" class="teams-list">
+                  <!-- Dynamicky pridané tímy -->
+                  <div class="no-teams-placeholder">Zatiaľ neboli pridané žiadne tímy.</div>
+                </div>
+              </div>
+
+              <div class="wizard-footer">
+                <button type="button" class="btn btn-secondary" id="btn-back-to-info">
+                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                  Späť
+                </button>
+                <button type="button" class="btn btn-primary" id="btn-next-to-draw">
+                  Pokračovať na žrebovanie
+                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- KROK 3: Žrebovanie a Harmonogram -->
+            <div class="wizard-step hidden" id="wizard-step-draw">
+              <div class="draw-setup-desc">
+                <p>Pred spustením turnaja priraďte tímy. Môžete kliknúť na <strong>🎲 Náhodne vylosovať</strong> a následne tímy <strong>manuálne presúvať (Drag & Drop)</strong> medzi skupinami alebo pozíciami. Kliknutím na tlačidlo <strong>➕</strong> v harmonograme môžete medzi zápasy pridať vlastné udalosti (obed, prestávku, vyhodnotenie), ktoré automaticky posunú nasledujúce zápasy.</p>
+              </div>
+
+              <div class="draw-workspace">
+                <!-- Ľavá časť: drag and drop tímy -->
+                <div class="draw-teams-side">
+                  <div class="draw-actions-row">
+                    <h4>Nasadenie a losovanie</h4>
+                    <button type="button" id="btn-draw-shuffle" class="btn btn-secondary btn-sm">🎲 Náhodne vylosovať</button>
+                  </div>
+                  <div id="draw-groups-container" class="draw-groups-grid">
+                    <!-- Dynamické skupiny pre Drag & Drop -->
+                  </div>
+                </div>
+
+                <!-- Pravá časť: harmonogram -->
+                <div class="draw-schedule-side">
+                  <h4>Časový harmonogram</h4>
+                  <div id="draw-schedule-timeline" class="draw-timeline">
+                    <!-- Dynamický zoznam zápasov a prestávok -->
+                  </div>
+                </div>
+              </div>
+
+
+
+              <div class="wizard-footer">
+                <button type="button" class="btn btn-secondary" id="btn-back-to-teams">
+                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                  Späť na tímy
+                </button>
+                <button type="button" class="btn btn-success" id="btn-draw-launch">
+                  Zahájiť turnaj!
+                  <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- KROK 4: Úspešne vytvorené -->
+            <div class="wizard-step hidden" id="wizard-step-4">
+              <div class="success-screen">
+                <div class="success-icon">
+                  <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </div>
+                <h2>Turnaj úspešne vytvorený!</h2>
+                <p>Váš turnaj bol úspešne zaregistrovaný v online databáze a je verejne viditeľný.</p>
+                
+                <div class="admin-key-box">
+                  <span class="key-label">ADMINISTRÁTORSKÝ KĽÚČ (Uložte si ho!)</span>
+                  <div class="key-display-row">
+                    <code id="admin-token-display">loading-token-12345</code>
+                    <button type="button" class="btn btn-sm btn-secondary" id="btn-copy-token">Kopírovať</button>
+                  </div>
+                  <p class="key-warning">Tento kľúč bol uložený vo vašom prehliadači. Umožňuje vám upravovať výsledky zápasov. Ak budete chcieť turnaj spravovať z iného počítača/prehliadača, budete musieť zadať tento kľúč.</p>
+                </div>
+
+                <div class="success-actions">
+                  <button type="button" id="btn-go-to-tournament" class="btn btn-primary btn-lg">Prejsť na detail turnaja</button>
+                  <a href="#home" class="btn btn-secondary btn-lg">Prehľad turnajov</a>
+                </div>
+              </div>
+            </div>
+
+          </form>
+        </div>
+      </section>
+
+      <!-- ================= POHĽAD 3: DETAIL TURNAJA (DASHBOARD) ================= -->
+      <section id="tournament-view" class="view-section hidden">
+        <!-- Hlavička detailu turnaja -->
+        <div class="tournament-detail-header card">
+          <div class="td-header-main">
+            <div class="td-icon-name">
+              <span class="td-emoji" id="td-emoji">🏆</span>
+              <div>
+                <h1 id="td-title">Názov turnaja</h1>
+                <div class="td-meta">
+                  <span class="badge badge-format" id="td-format-badge">Formát</span>
+                  <span class="meta-item">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    <span id="td-date">Dátum</span>
+                  </span>
+                  <span class="meta-item">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                    <span id="td-location">Miesto</span>
+                  </span>
+                  <span class="meta-item">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                    <span id="td-duration">15 min/zápas</span>
+                  </span>
+                  <span class="meta-item">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+                    <span id="td-category">👶 U15</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <div class="td-actions">
+              <button id="btn-share-link" class="btn btn-secondary">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                Zdieľať turnaj
+              </button>
+              <button id="btn-edit-tournament-details" class="btn btn-secondary hidden">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                ⚙️ Nastavenia & Prelosovanie
+              </button>
+              <button id="btn-delete-tournament" class="btn btn-danger hidden">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                Zmazať turnaj
+              </button>
+              <div id="admin-badge-container">
+                <!-- Zobrazí sa dynamicky (napr. "Ste administrátor" alebo "Zadať admin kľúč") -->
+              </div>
+            </div>
+          </div>
+
+          <div id="td-looking-teams-banner" class="looking-teams-banner hidden">
+            <span>🔍 Hľadáme tímy do turnaja! Ak máš záujem prihlásiť svoj tím, kontaktuj organizátora.</span>
+          </div>
+          <p id="td-desc" class="td-description">Popis turnaja...</p>
+
+          <div class="tournament-stats-summary" id="td-stats-summary">
+            <!-- Rýchle štatistiky: Tímy, Zápasy celkovo, Odohrané zápasy, Góly celkovo -->
+            <div class="stat-box">
+              <span class="stat-val" id="stat-teams-count">0</span>
+              <span class="stat-lbl">Tímov</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-val" id="stat-matches-count">0/0</span>
+              <span class="stat-lbl">Zápasov odohraných</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-val" id="stat-goals-count">0</span>
+              <span class="stat-lbl">Gólov celkovo</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-val" id="stat-status">Plánovaný</span>
+              <span class="stat-lbl">Stav turnaja</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Záložky (Tabs) pre turnajový panel -->
+        <div class="tab-navigation card">
+          <button class="tab-btn active" data-tab="matches">Rozpis & Zápasy</button>
+          <button class="tab-btn" id="tab-btn-standings" data-tab="standings">Tabuľky</button>
+          <button class="tab-btn" id="tab-btn-scorers" data-tab="scorers">Tabuľka strelcov</button>
+          <button class="tab-btn" id="tab-btn-bracket" data-tab="bracket">Vyraďovací pavúk</button>
+        </div>
+
+        <!-- Obsah záložiek -->
+        <div class="tab-content-container">
+          
+          <!-- ZÁLOŽKA: ZÁPASY -->
+          <div class="tab-content active" id="tab-matches">
+            <!-- Filter kôl alebo filtrovanie zápasov -->
+            <div class="matches-filter-row">
+              <h3 class="tab-title">Zápasy turnaja</h3>
+              <div class="round-selector-wrapper" id="round-selector-container">
+                <!-- Dynamické tlačidlá pre výber kôl (Round 1, Round 2 atď) -->
+              </div>
+            </div>
+            <div id="matches-list-container" class="matches-list-grid">
+              <!-- Dynamicky renderované zápasy -->
+            </div>
+          </div>
+
+          <!-- ZÁLOŽKA: TABUĽKA -->
+          <div class="tab-content" id="tab-standings">
+            <!-- Dynamicky nahradené v app.js: tabuľka ligy alebo viaceré tabuľky skupín -->
+          </div>
+
+          <!-- ZÁLOŽKA: STRELCI -->
+          <div class="tab-content" id="tab-scorers">
+            <!-- Dynamicky nahradené v app.js: tabuľka strelcov -->
+          </div>
+
+          <!-- ZÁLOŽKA: PAVÚK -->
+          <div class="tab-content" id="tab-bracket">
+            <h3 class="tab-title">Vyraďovací pavúk</h3>
+            <div class="bracket-scroll-container">
+              <div class="bracket-wrapper" id="bracket-root">
+                <!-- Dynamický pavúk zápasov -->
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ================= MODÁLNE OKNÁ (MODALS) ================= -->
+
+  <!-- MODAL: Editácia zápasu -->
+  <div class="modal-overlay" id="match-edit-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Upraviť výsledok zápasu</h3>
+        <button class="btn-close-modal" id="btn-close-match-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="match-edit-form" onsubmit="event.preventDefault();">
+          <input type="hidden" id="edit-match-id">
+          
+          <!-- Výber stavu zápasu -->
+          <div class="form-group">
+            <label for="edit-match-status">Stav zápasu</label>
+            <select id="edit-match-status" class="form-input">
+              <option value="scheduled">Naplánovaný (Nezačal)</option>
+              <option value="live">🔴 NAŽIVO</option>
+              <option value="finished">Ukončený</option>
+            </select>
+          </div>
+
+          <!-- Zadávanie skóre -->
+          <div class="score-editor-row">
+            <div class="score-team-col">
+              <span class="team-emoji-large" id="edit-team1-emoji">🦁</span>
+              <span class="team-name-large" id="edit-team1-name">Tím A</span>
+              <input type="number" id="edit-team1-score" min="0" value="0" class="form-input score-input">
+            </div>
+            
+            <div class="score-vs-divider">VS</div>
+            
+            <div class="score-team-col">
+              <span class="team-emoji-large" id="edit-team2-emoji">🐯</span>
+              <span class="team-name-large" id="edit-team2-name">Tím B</span>
+              <input type="number" id="edit-team2-score" min="0" value="0" class="form-input score-input">
+            </div>
+          </div>
+
+          <!-- Sekcia pre strelcov gólov (Prémiová vlastnosť) -->
+          <div class="scorers-section">
+            <h4>Strelci gólov</h4>
+            
+            <div class="scorers-grid">
+              <!-- Strelci Tím A -->
+              <div class="scorers-column">
+                <label>Strelci <span id="scorers-team1-lbl">Tím A</span></label>
+                <div class="scorer-input-row">
+                  <input type="text" id="team1-scorer-name" placeholder="Meno hráča" class="form-input input-sm">
+                  <input type="number" id="team1-scorer-minute" placeholder="Min" min="1" max="90" class="form-input input-sm minute-input">
+                  <button type="button" class="btn btn-sm btn-secondary" id="btn-add-team1-scorer">+</button>
+                </div>
+                <ul id="team1-scorers-list" class="scorers-list">
+                  <!-- Dynamickí strelci -->
+                </ul>
+              </div>
+
+              <!-- Strelci Tím B -->
+              <div class="scorers-column">
+                <label>Strelci <span id="scorers-team2-lbl">Tím B</span></label>
+                <div class="scorer-input-row">
+                  <input type="text" id="team2-scorer-name" placeholder="Meno hráča" class="form-input input-sm">
+                  <input type="number" id="team2-scorer-minute" placeholder="Min" min="1" max="90" class="form-input input-sm minute-input">
+                  <button type="button" class="btn btn-sm btn-secondary" id="btn-add-team2-scorer">+</button>
+                </div>
+                <ul id="team2-scorers-list" class="scorers-list">
+                  <!-- Dynamickí strelci -->
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-match-edit">Zrušiť</button>
+            <button type="submit" class="btn btn-success" id="btn-save-match-edit">Uložiť výsledok</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Administrácia a Prelosovanie turnaja (Iba Admin) -->
+  <div class="modal-overlay" id="admin-edit-tournament-modal">
+    <div class="modal-card modal-card-lg">
+      <div class="modal-header">
+        <h3>⚙️ Nastavenia & Prelosovanie turnaja</h3>
+        <button class="btn-close-modal" id="btn-close-admin-edit-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="admin-edit-tournament-form" onsubmit="event.preventDefault();">
+          
+          <div class="admin-edit-scroll-container">
+            <!-- Časť 1: Všeobecné nastavenia -->
+            <div class="admin-edit-section">
+              <h4 style="margin-bottom: 12px; color: var(--primary);">Základné nastavenia</h4>
+              <div class="form-group-grid">
+                <div class="form-group">
+                  <label for="ae-name">Názov turnaja *</label>
+                  <input type="text" id="ae-name" required class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="ae-location">Miesto konania *</label>
+                  <input type="text" id="ae-location" required class="form-input">
+                </div>
+              </div>
+              <div class="form-group-grid">
+                <div class="form-group">
+                  <label for="ae-date">Dátum konania *</label>
+                  <input type="date" id="ae-date" required class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="ae-category">Veková kategória *</label>
+                  <input type="text" id="ae-category" required class="form-input">
+                </div>
+              </div>
+              <div class="form-group-grid">
+                <div class="form-group">
+                  <label for="ae-match-duration">Dĺžka zápasu (minúty) *</label>
+                  <input type="number" id="ae-match-duration" required class="form-input">
+                </div>
+                <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 30px;">
+                  <input type="checkbox" id="ae-looking-for-teams" style="width: 20px; height: 20px; cursor: pointer;">
+                  <label for="ae-looking-for-teams" style="cursor: pointer; font-weight: 600; margin-bottom: 0;">Hľadáme tímy (otvorené prihlášky)</label>
+                </div>
+              </div>
+              <div class="form-group-grid">
+                <div class="form-group">
+                  <label for="ae-start-time">Čas začiatku turnaja *</label>
+                  <input type="time" id="ae-start-time" required class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="ae-interval">Prestávka medzi zápasmi (minúty) *</label>
+                  <input type="number" id="ae-interval" required class="form-input">
+                </div>
+                <div class="form-group">
+                  <label for="ae-pitches">Počet ihrísk *</label>
+                  <input type="number" id="ae-pitches" required class="form-input">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="ae-description">Popis turnaja</label>
+                <textarea id="ae-description" rows="2" class="form-input text-area"></textarea>
+              </div>
+            </div>
+
+            <!-- Časť 2: Správa tímov -->
+            <div class="admin-edit-section" style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
+              <h4 style="margin-bottom: 12px; color: var(--primary);">Tímy turnaja</h4>
+              <div class="team-input-row">
+                <div class="emoji-picker-container">
+                  <select id="ae-team-emoji-select" class="form-input team-emoji-select">
+                    <option value="🦁">🦁</option><option value="🐯">🐯</option><option value="🦅">🦅</option>
+                    <option value="🐺">🐺</option><option value="🐻">🐻</option><option value="🐂">🐂</option>
+                    <option value="🐉">🐉</option><option value="🦈">🦈</option><option value="🦊">🦊</option>
+                    <option value="🐍">🐍</option><option value="⚡">⚡</option><option value="🔥">🔥</option>
+                    <option value="☄️">☄️</option><option value="🛡️">🛡️</option><option value="⚔️">⚔️</option>
+                    <option value="⚽">⚽</option><option value="🚀">🚀</option><option value="💎">💎</option>
+                  </select>
+                </div>
+                <input type="text" id="ae-team-name-input" placeholder="Názov nového tímu" class="form-input team-name-input">
+                <button type="button" id="ae-btn-add-team" class="btn btn-secondary">Pridať tím</button>
+              </div>
+              <div class="teams-container" style="margin-bottom: 20px;">
+                <h5 class="sub-title">Zoznam tímov (<span id="ae-team-count">0</span>)</h5>
+                <div id="ae-teams-list" class="teams-list">
+                  <!-- Tímy pre úpravu -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Časť 3: Žrebovanie & Harmonogram -->
+            <div class="admin-edit-section" style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
+              <h4 style="margin-bottom: 12px; color: var(--primary);">Žrebovanie a Harmonogram (Krok 3)</h4>
+              <p class="draw-setup-desc">Zmeňte nasadenie náhodne alebo manuálne ťahaním (Drag & Drop) tímov. Taktiež môžete spravovať prestávky v zozname zápasov.</p>
+              
+              <div class="draw-workspace">
+                <div class="draw-teams-side">
+                  <div class="draw-actions-row">
+                    <h5>Nasadenie a losovanie</h5>
+                    <button type="button" id="ae-btn-draw-shuffle" class="btn btn-secondary btn-sm">🎲 Náhodne vylosovať</button>
+                  </div>
+                  <div id="ae-draw-groups-container" class="draw-groups-grid">
+                    <!-- Dynamické skupiny pre Drag & Drop -->
+                  </div>
+                </div>
+                <div class="draw-schedule-side">
+                  <h5>Časový harmonogram</h5>
+                  <div id="ae-draw-schedule-timeline" class="draw-timeline">
+                    <!-- Dynamický harmonogram -->
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Pätička modálu -->
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-admin-edit">Zrušiť</button>
+            <button type="submit" class="btn btn-success" id="btn-save-admin-edit">Uložiť a prelosovať turnaj!</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modál na pridanie prestávky -->
+  <div id="break-form-modal" class="modal-overlay">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-header">
+        <h3>Pridať prestávku / udalosť</h3>
+        <button type="button" class="btn-close-modal" id="btn-close-break-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="break-add-form" onsubmit="event.preventDefault();">
+          <input type="hidden" id="break-after-match-idx">
+          <div class="form-group">
+            <label for="break-name">Názov udalosti *</label>
+            <input type="text" id="break-name" required placeholder="napr. Obedná prestávka, Otvorenie" class="form-input">
+          </div>
+          <div class="form-group">
+            <label for="break-duration">Dĺžka trvania (minúty) *</label>
+            <input type="number" id="break-duration" value="30" min="5" max="180" required class="form-input">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-break-modal">Zrušiť</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-break">Pridať</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Zadať admin kľúč -->
+  <div class="modal-overlay" id="admin-key-modal">
+    <div class="modal-card modal-card-sm">
+      <div class="modal-header">
+        <h3>Administrácia turnaja</h3>
+        <button class="btn-close-modal" id="btn-close-admin-modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Pre správu výsledkov tohto turnaja zadajte administrátorský kľúč, ktorý bol vygenerovaný pri jeho vytvorení.</p>
+        <form id="admin-login-form" onsubmit="event.preventDefault();">
+          <div class="form-group">
+            <label for="admin-token-input">Administrátorský kľúč</label>
+            <input type="text" id="admin-token-input" required placeholder="Napr. t_7d2f9b8c..." class="form-input">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="btn-cancel-admin-modal">Zrušiť</button>
+            <button type="submit" class="btn btn-primary">Overiť a prihlásiť</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="app-footer">
+    <div class="container">
+      <p>&copy; 2026 FutbalTurnaje.sk. Všetky práva vyhradené. Vytvorené s láskou k futbalu ⚽</p>
+    </div>
+  </footer>
+
+  <!-- SCRIPT NAČÍTANIE (Order is critical) -->
+  <script src="js/utils.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/components.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
