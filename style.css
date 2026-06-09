@@ -1852,3 +1852,20 @@ p {
   padding-bottom: 8px;
   margin-bottom: 16px;
 }
+
+/* ================= SPONSORS AND PARTNERS ================= */
+.sponsor-item-link {
+  transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
+  cursor: pointer;
+  display: inline-flex;
+}
+.sponsor-item-link:hover {
+  transform: translateY(-2px) scale(1.05);
+}
+.sponsor-fallback {
+  transition: border-color 0.2s, background-color 0.2s;
+}
+.sponsor-fallback:hover {
+  border-color: var(--primary) !important;
+  background: rgba(0, 168, 204, 0.1) !important;
+}

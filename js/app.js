@@ -14,6 +14,8 @@ const app = {
   adminEditTeams: [],
   adminEditBreaks: [],
   isEditingBreakForAdmin: false,
+  wizardSponsors: [],
+  adminEditSponsors: [],
 
   /**
    * Inicializácia aplikácie
@@ -244,7 +246,9 @@ const app = {
     this.drawTeams = [];
     this.wizardBreaks = [];
     this.draggedTeamIdx = null;
+    this.wizardSponsors = [];
     this.updateTeamsListUI();
+    this.updateWizardSponsorsListUI();
 
     // Zobrazenie prvého kroku
     document.getElementById('wizard-step-1').classList.remove('hidden');
@@ -351,13 +355,107 @@ const app = {
     });
   },
 
+  addWizardSponsor: function() {
+    const nameInput = document.getElementById('t-sponsor-name');
+    const linkInput = document.getElementById('t-sponsor-link');
+    const logoInput = document.getElementById('t-sponsor-logo');
+
+    const name = nameInput.value.trim();
+    const link = linkInput.value.trim();
+    const logo = logoInput.value.trim();
+
+    if (!name) {
+      this.showToast('Meno sponzora je povinné!', 'warning');
+      return;
+    }
+
+    this.wizardSponsors.push({ name, link, logo });
+    
+    nameInput.value = '';
+    linkInput.value = '';
+    logoInput.value = '';
+
+    this.updateWizardSponsorsListUI();
+  },
+
+  removeWizardSponsor: function(idx) {
+    this.wizardSponsors.splice(idx, 1);
+    this.updateWizardSponsorsListUI();
+  },
+
+  updateWizardSponsorsListUI: function() {
+    const container = document.getElementById('sponsors-list-preview');
+    if (!container) return;
+    container.innerHTML = '';
+    this.wizardSponsors.forEach((s, idx) => {
+      const logoHtml = s.logo 
+        ? `<img src="${s.logo}" style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px;" alt="${s.name}"/>` 
+        : '🤝';
+      container.innerHTML += `
+        <div class="team-item" style="padding: 6px 12px; gap: 8px;">
+          ${logoHtml}
+          <span style="font-weight: 500; font-size: 0.85rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.name}</span>
+          <button type="button" class="btn-remove-team" onclick="app.removeWizardSponsor(${idx})">&times;</button>
+        </div>
+      `;
+    });
+  },
+
+  addAdminSponsor: function() {
+    const nameInput = document.getElementById('ae-sponsor-name');
+    const linkInput = document.getElementById('ae-sponsor-link');
+    const logoInput = document.getElementById('ae-sponsor-logo');
+
+    const name = nameInput.value.trim();
+    const link = linkInput.value.trim();
+    const logo = logoInput.value.trim();
+
+    if (!name) {
+      this.showToast('Meno sponzora je povinné!', 'warning');
+      return;
+    }
+
+    this.adminEditSponsors.push({ name, link, logo });
+
+    nameInput.value = '';
+    linkInput.value = '';
+    logoInput.value = '';
+
+    this.updateAdminSponsorsListUI();
+  },
+
+  removeAdminSponsor: function(idx) {
+    this.adminEditSponsors.splice(idx, 1);
+    this.updateAdminSponsorsListUI();
+  },
+
+  updateAdminSponsorsListUI: function() {
+    const container = document.getElementById('ae-sponsors-list-preview');
+    if (!container) return;
+    container.innerHTML = '';
+    this.adminEditSponsors.forEach((s, idx) => {
+      const logoHtml = s.logo 
+        ? `<img src="${s.logo}" style="width: 24px; height: 24px; object-fit: contain; border-radius: 4px;" alt="${s.name}"/>` 
+        : '🤝';
+      container.innerHTML += `
+        <div class="team-item" style="padding: 6px 12px; gap: 8px;">
+          ${logoHtml}
+          <span style="font-weight: 500; font-size: 0.85rem; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${s.name}</span>
+          <button type="button" class="btn-remove-team" onclick="app.removeAdminSponsor(${idx})">&times;</button>
+        </div>
+      `;
+    });
+  },
+
   fillPlaceholderTeams: function(teams, format) {
     const filled = [...teams];
     const n = filled.length;
     let target = n;
 
-    if (format === 'league') {
+    if (format === 'league' || format === 'league_double') {
       if (n < 3) target = 3;
+    } else if (format === 'league_playoff') {
+      if (n < 4) target = 4;
     } else if (format === 'knockout') {
       if (n <= 4) target = 4;
       else if (n <= 8) target = 8;
@@ -365,11 +463,16 @@ const app = {
     } else if (format === 'groups_2_top2') {
       if (n < 6) target = 6;
       else if (n % 2 !== 0) target = n + 1;
+    } else if (format === 'groups_2_top4') {
+      if (n < 8) target = 8;
+      else if (n % 2 !== 0) target = n + 1;
     } else if (format === 'groups_2_all') {
       target = 8;
     } else if (format === 'groups_4_top2') {
       if (n < 8) target = 8;
       else if (n % 4 !== 0) target = 4 * Math.ceil(n / 4);
+    } else if (format === 'groups_4_all') {
+      target = 16;
     }
 
     let placeholderCount = 1;
@@ -406,9 +509,14 @@ const app = {
     const n = this.wizardTeams.length;
 
     // Validácia počtu tímov
-    if (format === 'league') {
+    if (format === 'league' || format === 'league_double') {
       if (n < 3) {
         this.showToast('Ligový turnaj vyžaduje minimálne 3 tímy!', 'warning');
+        return;
+      }
+    } else if (format === 'league_playoff') {
+      if (n < 4) {
+        this.showToast('Formát Liga + Vyraďovačka vyžaduje minimálne 4 tímy!', 'warning');
         return;
       }
     } else if (format === 'knockout') {
@@ -421,6 +529,11 @@ const app = {
         this.showToast('Tento formát vyžaduje párny počet tímov (minimálne 6)!', 'warning');
         return;
       }
+    } else if (format === 'groups_2_top4') {
+      if (n < 8 || n % 2 !== 0) {
+        this.showToast('Tento formát vyžaduje párny počet tímov (minimálne 8)!', 'warning');
+        return;
+      }
     } else if (format === 'groups_2_all') {
       if (n !== 8) {
         this.showToast('Tento formát vyžaduje presne 8 tímov (4 v každej skupine)!', 'warning');
@@ -429,6 +542,11 @@ const app = {
     } else if (format === 'groups_4_top2') {
       if (n < 8 || n % 4 !== 0) {
         this.showToast('Tento formát vyžaduje počet tímov deliteľný 4 (minimálne 8 tímov)!', 'warning');
+        return;
+      }
+    } else if (format === 'groups_4_all') {
+      if (n !== 16) {
+        this.showToast('Tento formát vyžaduje presne 16 tímov (4 v každej zo 4 skupín)!', 'warning');
         return;
       }
     }
@@ -543,6 +661,8 @@ const app = {
     let tempMatches = [];
     if (format === 'league') {
       tempMatches = Utils.generateRoundRobin(this.drawTeams);
+    } else if (format === 'league_double') {
+      tempMatches = Utils.generateDoubleRoundRobin(this.drawTeams);
     } else if (format === 'knockout') {
       tempMatches = Utils.generateKnockout(this.drawTeams);
     } else {
@@ -713,6 +833,8 @@ const app = {
     let finalMatches = [];
     if (format === 'league') {
       finalMatches = Utils.generateRoundRobin(this.drawTeams);
+    } else if (format === 'league_double') {
+      finalMatches = Utils.generateDoubleRoundRobin(this.drawTeams);
     } else if (format === 'knockout') {
       finalMatches = Utils.generateKnockout(this.drawTeams);
     } else {
@@ -729,6 +851,7 @@ const app = {
         teams: this.drawTeams,
         matches: finalMatches,
         breaks: this.wizardBreaks,
+        sponsors: this.wizardSponsors,
         startTime,
         interval,
         pitches
@@ -835,20 +958,37 @@ const app = {
 
       const formatBadge = document.getElementById('td-format-badge');
       
-      let formatLabel = 'Liga';
-      if (t.format === 'knockout') formatLabel = 'Vyraďovačka';
-      else if (t.format === 'groups_2_top2') formatLabel = '2 Skupiny -> SF';
-      else if (t.format === 'groups_2_all') formatLabel = '2 Skupiny -> Všetci';
-      else if (t.format === 'groups_4_top2') formatLabel = '4 Skupiny -> ŠF';
-      
+      let formatLabel = Components.getFormatLabel(t.format);
       formatBadge.innerText = formatLabel;
+
+      // Vykreslenie sponzorov na detaile turnaja
+      const sponsorsCard = document.getElementById('td-sponsors-card');
+      const sponsorsList = document.getElementById('td-sponsors-list');
+      if (sponsorsCard && sponsorsList) {
+        if (t.sponsors && t.sponsors.length > 0) {
+          sponsorsCard.classList.remove('hidden');
+          sponsorsList.innerHTML = '';
+          t.sponsors.forEach(s => {
+            const logoHtml = s.logo 
+              ? `<img src="${s.logo}" alt="${s.name}" style="height: 36px; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2)); transition: transform 0.2s;"/>` 
+              : `<span class="sponsor-fallback" style="font-weight:600; font-size:0.95rem; color:var(--primary); padding: 6px 12px; border: 1px solid rgba(0, 168, 204, 0.2); border-radius: 8px; background: rgba(0, 168, 204, 0.05); display: flex; align-items: center; gap: 6px;">🤝 ${s.name}</span>`;
+            
+            const linkStart = s.link ? `<a href="${s.link}" target="_blank" rel="noopener noreferrer" class="sponsor-item-link" style="display: block; text-decoration: none; transform-origin: center;">` : `<div class="sponsor-item-link">`;
+            const linkEnd = s.link ? `</a>` : `</div>`;
+            
+            sponsorsList.innerHTML += `${linkStart}${logoHtml}${linkEnd}`;
+          });
+        } else {
+          sponsorsCard.classList.add('hidden');
+        }
+      }
       
       // Nastavenie záložiek podľa typu turnaja
       const tabStandings = document.getElementById('tab-btn-standings');
       const tabBracket = document.getElementById('tab-btn-bracket');
-      const isGroupFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2'].includes(t.format);
+      const isGroupFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2', 'league_playoff', 'groups_2_top4', 'groups_4_all'].includes(t.format);
 
-      if (t.format === 'league') {
+      if (t.format === 'league' || t.format === 'league_double') {
         tabStandings.style.display = 'block';
         tabStandings.innerText = 'Tabuľka ligy';
         tabBracket.style.display = 'none';
@@ -860,7 +1000,7 @@ const app = {
         this.switchTab('bracket'); // predvolený tab pavúk pre vyraďovačku
       } else if (isGroupFormat) {
         tabStandings.style.display = 'block';
-        tabStandings.innerText = 'Tabuľky skupín';
+        tabStandings.innerText = t.format === 'league_playoff' ? 'Tabuľka ligy' : 'Tabuľky skupín';
         tabBracket.style.display = 'block';
         tabBracket.innerText = 'Vyraďovací pavúk';
         this.switchTab('matches'); // predvolene zápasy pre skupiny
@@ -929,9 +1069,9 @@ const app = {
 
     // ZÁLOŽKA: TABUĽKA LIGY / TABUĽKY SKUPÍN
     const tabStandingsContent = document.getElementById('tab-standings');
-    const isGroupFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2'].includes(t.format);
+    const isGroupFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2', 'league_playoff', 'groups_2_top4', 'groups_4_all'].includes(t.format);
 
-    if (t.format === 'league') {
+    if (t.format === 'league' || t.format === 'league_double') {
       tabStandingsContent.innerHTML = `
         <h3 class="tab-title">Priebežná ligová tabuľka</h3>
         <div class="table-responsive">
@@ -1068,8 +1208,10 @@ const app = {
     // Inicializujeme kopie tímov a prestávok
     this.adminEditTeams = JSON.parse(JSON.stringify(t.teams || []));
     this.adminEditBreaks = JSON.parse(JSON.stringify(t.breaks || []));
+    this.adminEditSponsors = JSON.parse(JSON.stringify(t.sponsors || []));
     
     // Zobrazenie tímov a prelosovania
+    this.updateAdminSponsorsListUI();
     this.updateAdminTeamsListUI();
     this.updateAdminDrawWorkspace();
 
@@ -1246,6 +1388,8 @@ const app = {
     let tempMatches = [];
     if (format === 'league') {
       tempMatches = Utils.generateRoundRobin(this.adminEditTeams);
+    } else if (format === 'league_double') {
+      tempMatches = Utils.generateDoubleRoundRobin(this.adminEditTeams);
     } else if (format === 'knockout') {
       tempMatches = Utils.generateKnockout(this.adminEditTeams);
     } else {
@@ -1404,9 +1548,14 @@ const app = {
     }
 
     // Validácia
-    if (format === 'league') {
+    if (format === 'league' || format === 'league_double') {
       if (n < 3) {
         this.showToast('Ligový turnaj vyžaduje minimálne 3 tímy!', 'warning');
+        return;
+      }
+    } else if (format === 'league_playoff') {
+      if (n < 4) {
+        this.showToast('Formát Liga + Vyraďovačka vyžaduje minimálne 4 tímy!', 'warning');
         return;
       }
     } else if (format === 'knockout') {
@@ -1419,6 +1568,11 @@ const app = {
         this.showToast('Tento formát vyžaduje párny počet tímov (minimálne 6)!', 'warning');
         return;
       }
+    } else if (format === 'groups_2_top4') {
+      if (n < 8 || n % 2 !== 0) {
+        this.showToast('Tento formát vyžaduje párny počet tímov (minimálne 8)!', 'warning');
+        return;
+      }
     } else if (format === 'groups_2_all') {
       if (n !== 8) {
         this.showToast('Tento formát vyžaduje presne 8 tímov (4 v každej skupine)!', 'warning');
@@ -1427,6 +1581,11 @@ const app = {
     } else if (format === 'groups_4_top2') {
       if (n < 8 || n % 4 !== 0) {
         this.showToast('Tento formát vyžaduje počet tímov deliteľný 4 (minimálne 8 tímov)!', 'warning');
+        return;
+      }
+    } else if (format === 'groups_4_all') {
+      if (n !== 16) {
+        this.showToast('Tento formát vyžaduje presne 16 tímov (4 v každej zo 4 skupín)!', 'warning');
         return;
       }
     }
@@ -1441,6 +1600,8 @@ const app = {
     let finalMatches = [];
     if (format === 'league') {
       finalMatches = Utils.generateRoundRobin(this.adminEditTeams);
+    } else if (format === 'league_double') {
+      finalMatches = Utils.generateDoubleRoundRobin(this.adminEditTeams);
     } else if (format === 'knockout') {
       finalMatches = Utils.generateKnockout(this.adminEditTeams);
     } else {
@@ -1464,7 +1625,8 @@ const app = {
         description,
         teams: this.adminEditTeams,
         matches: finalMatches,
-        breaks: this.adminEditBreaks
+        breaks: this.adminEditBreaks,
+        sponsors: this.adminEditSponsors
       }, this.currentAdminToken);
 
       this.activeTournament = updated;
@@ -1805,6 +1967,47 @@ const app = {
     bindClick('btn-next-to-teams', () => this.nextToTeams());
     bindClick('btn-back-to-info', () => this.backToInfo());
     bindClick('btn-add-team', () => this.addTeam());
+    
+    // Sponzori
+    bindClick('btn-add-sponsor', () => this.addWizardSponsor());
+    bindClick('ae-btn-add-sponsor', () => this.addAdminSponsor());
+
+    bindEvent('t-sponsor-name', 'keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.addWizardSponsor();
+      }
+    });
+    bindEvent('t-sponsor-link', 'keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.addWizardSponsor();
+      }
+    });
+    bindEvent('t-sponsor-logo', 'keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.addWizardSponsor();
+      }
+    });
+    bindEvent('ae-sponsor-name', 'keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.addAdminSponsor();
+      }
+    });
+    bindEvent('ae-sponsor-link', 'keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.addAdminSponsor();
+      }
+    });
+    bindEvent('ae-sponsor-logo', 'keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        this.addAdminSponsor();
+      }
+    });
     
     // Odoslanie tímu po stlačení Enter
     bindEvent('team-name-input', 'keypress', (e) => {

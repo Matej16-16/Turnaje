@@ -3,7 +3,7 @@
  */
 const Api = {
   // Unikátne vedro (bucket) pre tohto používateľa, odvodené z prostredia
-  BUCKET_URL: 'https://kvdb.io/b1f04c0a_turnaje_v1/data',
+  BUCKET_URL: 'https://kvdb.io/kqTZd1BSAvBNEeHNBmAvK/data',
   LOCAL_KEY: 'futbal_tournaments_local',
   isOnlineMode: true,
 
@@ -80,6 +80,8 @@ const Api = {
     if (!matches || matches.length === 0) {
       if (tournamentData.format === 'league') {
         matches = Utils.generateRoundRobin(tournamentData.teams);
+      } else if (tournamentData.format === 'league_double') {
+        matches = Utils.generateDoubleRoundRobin(tournamentData.teams);
       } else if (tournamentData.format === 'knockout') {
         matches = Utils.generateKnockout(tournamentData.teams);
       } else {
@@ -104,6 +106,7 @@ const Api = {
       startTime: tournamentData.startTime || '09:00',
       interval: parseInt(tournamentData.interval) || 20,
       pitches: parseInt(tournamentData.pitches) || 1,
+      sponsors: tournamentData.sponsors || [],
       adminToken: adminToken,
       createdAt: new Date().toISOString()
     };
@@ -175,7 +178,7 @@ const Api = {
     }
 
     // Logika pre skupinové fázy (ak sa ukončil zápas v skupine)
-    const isGroupFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2'].includes(tournament.format);
+    const isGroupFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2', 'league_playoff', 'groups_2_top4', 'groups_4_all'].includes(tournament.format);
     if (isGroupFormat && match.stage === 'group' && match.status === 'finished') {
       const groupMatches = tournament.matches.filter(m => m.stage === 'group');
       const allGroupMatchesFinished = groupMatches.every(m => m.status === 'finished');
@@ -239,6 +242,7 @@ const Api = {
     tournament.teams = updatedFields.teams;
     tournament.matches = updatedFields.matches;
     tournament.breaks = updatedFields.breaks || [];
+    tournament.sponsors = updatedFields.sponsors || [];
 
     // Uložíme zmeny
     await this._save(tournaments);
@@ -250,8 +254,10 @@ const Api = {
    */
   _seedPlayoffs: function(tournament) {
     let numGroups = 2;
-    if (tournament.format === 'groups_4_top2') {
+    if (tournament.format === 'groups_4_top2' || tournament.format === 'groups_4_all') {
       numGroups = 4;
+    } else if (tournament.format === 'league_playoff') {
+      numGroups = 1;
     }
     const groupNames = ['A', 'B', 'C', 'D'].slice(0, numGroups);
     const standings = {};

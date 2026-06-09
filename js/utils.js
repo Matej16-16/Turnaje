@@ -89,6 +89,27 @@ const Utils = {
   },
 
   /**
+   * Generuje rozpis zápasov pre formát Každý s každým (Round Robin) s odvetami
+   */
+  generateDoubleRoundRobin: function(teams) {
+    const round1 = this.generateRoundRobin(teams);
+    if (round1.length === 0) return [];
+    
+    const maxRound = Math.max(...round1.map(m => m.round));
+    const round2 = round1.map(m => {
+      return {
+        ...m,
+        id: m.id + '_r2',
+        team1: m.team2,
+        team2: m.team1,
+        round: m.round + maxRound,
+        roundName: `Kolo ${m.round + maxRound}`
+      };
+    });
+    return [...round1, ...round2];
+  },
+
+  /**
    * Generuje vyraďovací pavúk (Single Elimination)
    * Podporuje presne 4, 8 alebo 16 tímov.
    * 
@@ -188,12 +209,14 @@ const Utils = {
 
   /**
    * Generuje skupinovú fázu a prázdny play-off pavúk
-   * Podporuje formáty groups_2_top2, groups_2_all, groups_4_top2.
+   * Podporuje formáty groups_2_top2, groups_2_all, groups_4_top2, league_playoff, groups_2_top4, groups_4_all.
    */
   generateGroupsAndPlayoffs: function(teams, format) {
     let numGroups = 2;
-    if (format === 'groups_4_top2') {
+    if (format === 'groups_4_top2' || format === 'groups_4_all') {
       numGroups = 4;
+    } else if (format === 'league_playoff') {
+      numGroups = 1;
     }
     
     // Rozdelenie tímov do skupín (striedavo)
@@ -217,8 +240,11 @@ const Utils = {
     
     // Generovanie prázdneho play-off pavúka
     const playoffMatches = [];
-    if (format === 'groups_2_top2') {
+    if (format === 'groups_2_top2' || format === 'league_playoff') {
       // 4 tímy v play-off (2 SF, 1 F)
+      const seed1 = format === 'league_playoff' ? { team1: '1A', team2: '4A' } : { team1: '1A', team2: '2B' };
+      const seed2 = format === 'league_playoff' ? { team1: '2A', team2: '3A' } : { team1: '1B', team2: '2A' };
+
       playoffMatches.push(
         {
           id: 'p_sf_1',
@@ -226,7 +252,7 @@ const Utils = {
           status: 'scheduled', scorers: { team1: [], team2: [] },
           roundIndex: 0, roundName: 'Semifinále', stage: 'playoff',
           nextMatchId: 'p_f_1', nextMatchSide: 'team1',
-          seedInfo: { team1: '1A', team2: '2B' }
+          seedInfo: seed1
         },
         {
           id: 'p_sf_2',
@@ -234,7 +260,7 @@ const Utils = {
           status: 'scheduled', scorers: { team1: [], team2: [] },
           roundIndex: 0, roundName: 'Semifinále', stage: 'playoff',
           nextMatchId: 'p_f_1', nextMatchSide: 'team2',
-          seedInfo: { team1: '1B', team2: '2A' }
+          seedInfo: seed2
         },
         {
           id: 'p_f_1',
@@ -244,9 +270,9 @@ const Utils = {
           nextMatchId: null, nextMatchSide: null
         }
       );
-    } else if (format === 'groups_2_all' || format === 'groups_4_top2') {
+    } else if (format === 'groups_2_all' || format === 'groups_2_top4' || format === 'groups_4_top2') {
       // 8 tímov v play-off (4 QF, 2 SF, 1 F)
-      const seedInfoMap = format === 'groups_2_all' ? {
+      const seedInfoMap = (format === 'groups_2_all' || format === 'groups_2_top4') ? {
         qf1: { team1: '1A', team2: '4B' },
         qf2: { team1: '2A', team2: '3B' },
         qf3: { team1: '3A', team2: '2B' },
@@ -310,6 +336,127 @@ const Utils = {
           team1: null, team2: null, score1: null, score2: null,
           status: 'scheduled', scorers: { team1: [], team2: [] },
           roundIndex: 2, roundName: 'Finále', stage: 'playoff',
+          nextMatchId: null, nextMatchSide: null
+        }
+      );
+    } else if (format === 'groups_4_all') {
+      // 16 tímov v play-off (8 Osemfinále, 4 Štvrťfinále, 2 Semifinále, 1 Finále)
+      playoffMatches.push(
+        // Osemfinále (roundIndex: 0)
+        {
+          id: 'p_r16_1',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 0, roundName: 'Osemfinále', stage: 'playoff',
+          nextMatchId: 'p_qf_1', nextMatchSide: 'team1',
+          seedInfo: { team1: '1A', team2: '4B' }
+        },
+        {
+          id: 'p_r16_2',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 0, roundName: 'Osemfinále', stage: 'playoff',
+          nextMatchId: 'p_qf_1', nextMatchSide: 'team2',
+          seedInfo: { team1: '2A', team2: '3B' }
+        },
+        {
+          id: 'p_r16_3',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 0, roundName: 'Osemfinále', stage: 'playoff',
+          nextMatchId: 'p_qf_2', nextMatchSide: 'team1',
+          seedInfo: { team1: '3A', team2: '2B' }
+        },
+        {
+          id: 'p_r16_4',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 0, roundName: 'Osemfinále', stage: 'playoff',
+          nextMatchId: 'p_qf_2', nextMatchSide: 'team2',
+          seedInfo: { team1: '4A', team2: '1B' }
+        },
+        {
+          id: 'p_r16_5',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 0, roundName: 'Osemfinále', stage: 'playoff',
+          nextMatchId: 'p_qf_3', nextMatchSide: 'team1',
+          seedInfo: { team1: '1C', team2: '4D' }
+        },
+        {
+          id: 'p_r16_6',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 0, roundName: 'Osemfinále', stage: 'playoff',
+          nextMatchId: 'p_qf_3', nextMatchSide: 'team2',
+          seedInfo: { team1: '2C', team2: '3D' }
+        },
+        {
+          id: 'p_r16_7',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 0, roundName: 'Osemfinále', stage: 'playoff',
+          nextMatchId: 'p_qf_4', nextMatchSide: 'team1',
+          seedInfo: { team1: '3C', team2: '2D' }
+        },
+        {
+          id: 'p_r16_8',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 0, roundName: 'Osemfinále', stage: 'playoff',
+          nextMatchId: 'p_qf_4', nextMatchSide: 'team2',
+          seedInfo: { team1: '4C', team2: '1D' }
+        },
+        // Štvrťfinále (roundIndex: 1)
+        {
+          id: 'p_qf_1',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 1, roundName: 'Štvrťfinále', stage: 'playoff',
+          nextMatchId: 'p_sf_1', nextMatchSide: 'team1'
+        },
+        {
+          id: 'p_qf_2',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 1, roundName: 'Štvrťfinále', stage: 'playoff',
+          nextMatchId: 'p_sf_1', nextMatchSide: 'team2'
+        },
+        {
+          id: 'p_qf_3',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 1, roundName: 'Štvrťfinále', stage: 'playoff',
+          nextMatchId: 'p_sf_2', nextMatchSide: 'team1'
+        },
+        {
+          id: 'p_qf_4',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 1, roundName: 'Štvrťfinále', stage: 'playoff',
+          nextMatchId: 'p_sf_2', nextMatchSide: 'team2'
+        },
+        // Semifinále (roundIndex: 2)
+        {
+          id: 'p_sf_1',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 2, roundName: 'Semifinále', stage: 'playoff',
+          nextMatchId: 'p_f_1', nextMatchSide: 'team1'
+        },
+        {
+          id: 'p_sf_2',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 2, roundName: 'Semifinále', stage: 'playoff',
+          nextMatchId: 'p_f_1', nextMatchSide: 'team2'
+        },
+        // Finále (roundIndex: 3)
+        {
+          id: 'p_f_1',
+          team1: null, team2: null, score1: null, score2: null,
+          status: 'scheduled', scorers: { team1: [], team2: [] },
+          roundIndex: 3, roundName: 'Finále', stage: 'playoff',
           nextMatchId: null, nextMatchSide: null
         }
       );

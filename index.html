@@ -121,10 +121,14 @@
                   <label for="t-format">Formát turnaja *</label>
                   <select id="t-format" class="form-input">
                     <option value="league">Liga (Round Robin - každý s každým)</option>
+                    <option value="league_double">Liga s odvetami (každý s každým doma/vonku)</option>
+                    <option value="league_playoff">Liga + Vyraďovačka (Každý s každým -> Top 4 do Semifinále)</option>
                     <option value="knockout">Vyraďovačka (Single Elimination - pavúk)</option>
                     <option value="groups_2_top2">Skupiny: 2 skupiny -> Top 2 do Semifinále</option>
+                    <option value="groups_2_top4">Skupiny: 2 skupiny -> Top 4 do Štvrťfinále (min. 8 tímov)</option>
                     <option value="groups_2_all">Skupiny: 2 skupiny -> Všetci do Štvrťfinále (presne 8 tímov)</option>
-                    <option value="groups_4_top2">Skupiny: 4 skupiny -> Top 2 do Štvrťfinále</option>
+                    <option value="groups_4_top2">Skupiny: 4 skupiny -> Top 2 do Štvrťfinále (min. 8 tímov)</option>
+                    <option value="groups_4_all">Skupiny: 4 skupiny -> Všetci do Osemfinále (presne 16 tímov)</option>
                   </select>
                 </div>
               </div>
@@ -188,6 +192,20 @@
               <div class="form-group">
                 <label for="t-description">Popis turnaja</label>
                 <textarea id="t-description" rows="3" placeholder="Sem napíš podrobnosti o turnaji, pravidlách, cenách atď..." class="form-input text-area"></textarea>
+              </div>
+
+              <div class="form-group" style="border-top: 1px solid var(--border-color); padding-top: 20px;">
+                <label style="color: var(--primary); font-size: 1.1rem; margin-bottom: 8px;">Sponzori a Partneri turnaja (Monetizácia)</label>
+                <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">Môžete pridať logá a odkazy na webové stránky sponzorov, ktoré sa zobrazia na detaile turnaja.</p>
+                <div class="sponsor-input-row" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                  <input type="text" id="t-sponsor-name" placeholder="Meno sponzora (napr. Nike)" class="form-input" style="flex: 1; min-width: 150px;">
+                  <input type="text" id="t-sponsor-link" placeholder="Odkaz na web (https://...)" class="form-input" style="flex: 1.5; min-width: 200px;">
+                  <input type="text" id="t-sponsor-logo" placeholder="URL Loga (nepovinné)" class="form-input" style="flex: 1.5; min-width: 200px;">
+                  <button type="button" id="btn-add-sponsor" class="btn btn-secondary">Pridať sponzora</button>
+                </div>
+                <div id="sponsors-list-preview" class="sponsors-list-preview" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                  <!-- Zoznam pridaných sponzorov -->
+                </div>
               </div>
 
               <div class="wizard-footer">
@@ -388,6 +406,14 @@
           </div>
         </div>
 
+        <!-- Sponzori turnaja -->
+        <div id="td-sponsors-card" class="card hidden" style="margin-bottom: 24px; padding: 16px 20px;">
+          <h4 style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px; letter-spacing: 0.05em; font-family: var(--font-heading); font-weight: 700;">Partneri a sponzori turnaja</h4>
+          <div id="td-sponsors-list" class="sponsors-list-grid" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap;">
+            <!-- Zoznam sponzorov s logami -->
+          </div>
+        </div>
+
         <!-- Záložky (Tabs) pre turnajový panel -->
         <div class="tab-navigation card">
           <button class="tab-btn active" data-tab="matches">Rozpis & Zápasy</button>
@@ -582,6 +608,21 @@
               <div class="form-group">
                 <label for="ae-description">Popis turnaja</label>
                 <textarea id="ae-description" rows="2" class="form-input text-area"></textarea>
+              </div>
+            </div>
+
+            <!-- Časť 1.5: Správa sponzorov -->
+            <div class="admin-edit-section" style="border-top: 1px solid var(--border-color); padding-top: 20px; margin-top: 20px;">
+              <h4 style="margin-bottom: 12px; color: var(--primary);">Sponzori a Partneri turnaja</h4>
+              <p class="draw-setup-desc">Spravujte zoznam sponzorov a partnerov turnaja pre účely monetizácie.</p>
+              <div class="sponsor-input-row" style="display: flex; gap: 10px; margin-bottom: 15px; flex-wrap: wrap;">
+                <input type="text" id="ae-sponsor-name" placeholder="Meno sponzora" class="form-input" style="flex: 1; min-width: 150px;">
+                <input type="text" id="ae-sponsor-link" placeholder="Odkaz na web (https://...)" class="form-input" style="flex: 1.5; min-width: 200px;">
+                <input type="text" id="ae-sponsor-logo" placeholder="URL Loga (nepovinné)" class="form-input" style="flex: 1.5; min-width: 200px;">
+                <button type="button" id="ae-btn-add-sponsor" class="btn btn-secondary">Pridať sponzora</button>
+              </div>
+              <div id="ae-sponsors-list-preview" class="sponsors-list-preview" style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                <!-- Sponzori pre úpravu -->
               </div>
             </div>
 

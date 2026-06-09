@@ -3,6 +3,24 @@
  */
 const Components = {
   /**
+   * Pomocná metóda na získanie slovenského názvu formátu
+   */
+  getFormatLabel: function(format) {
+    const formatLabels = {
+      'league': 'Liga (Každý s každým)',
+      'league_double': 'Liga s odvetami',
+      'league_playoff': 'Liga + Vyraďovačka',
+      'knockout': 'Vyraďovačka (Pavúk)',
+      'groups_2_top2': '2 Skupiny -> SF',
+      'groups_2_top4': '2 Skupiny -> ŠF',
+      'groups_2_all': '2 Skupiny -> Všetci',
+      'groups_4_top2': '4 Skupiny -> ŠF',
+      'groups_4_all': '4 Skupiny -> Osemfinále'
+    };
+    return formatLabels[format] || format;
+  },
+
+  /**
    * Vykreslí kartu turnaja pre domovskú obrazovku (mriežku)
    */
   renderTournamentCard: function(tournament) {
@@ -31,7 +49,7 @@ const Components = {
       statusText = 'Prebieha';
     }
 
-    const formatText = tournament.format === 'league' ? 'Liga (Každý s každým)' : 'Vyraďovačka (Pavúk)';
+    const formatText = this.getFormatLabel(tournament.format);
     const dateFormatted = Utils.formatDate(tournament.date);
 
     const categoryHtml = tournament.category ? `<span class="badge-category">👶 ${tournament.category}</span>` : '';
@@ -128,8 +146,10 @@ const Components = {
    */
   renderGroupStandings: function(tournament) {
     let numGroups = 2;
-    if (tournament.format === 'groups_4_top2') {
+    if (tournament.format === 'groups_4_top2' || tournament.format === 'groups_4_all') {
       numGroups = 4;
+    } else if (tournament.format === 'league_playoff') {
+      numGroups = 1;
     }
     const groupNames = ['A', 'B', 'C', 'D'].slice(0, numGroups);
     let html = '';
@@ -153,9 +173,12 @@ const Components = {
         rowsHtml = `<tr><td colspan="9" class="txt-center">Žiadne tímy.</td></tr>`;
       } else {
         standings.forEach((row, index) => {
-          // Zelené zafarbenie pre postupujúcich (prví dvaja, okrem groups_2_all kde postupujú všetci štyria)
+          // Zelené zafarbenie pre postupujúcich
           let rowClass = '';
-          const maxAdvancing = tournament.format === 'groups_2_all' ? 4 : 2;
+          let maxAdvancing = 2;
+          if (['groups_2_all', 'groups_4_all', 'groups_2_top4', 'league_playoff'].includes(tournament.format)) {
+            maxAdvancing = 4;
+          }
           if (index < maxAdvancing && row.played > 0) {
             rowClass = 'top-team';
           }
@@ -301,7 +324,7 @@ const Components = {
    * Vykreslí vyraďovacieho pavúka (Single Elimination)
    */
   renderBracket: function(tournament, isOrganizer) {
-    const isGroupFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2'].includes(tournament.format);
+    const isGroupFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2', 'league_playoff', 'groups_2_top4', 'groups_4_all'].includes(tournament.format);
     if (tournament.format !== 'knockout' && !isGroupFormat) {
       return '<div class="txt-center" style="padding: 40px; color: var(--text-muted);">Tento turnaj nemá vyraďovacieho pavúka.</div>';
     }
