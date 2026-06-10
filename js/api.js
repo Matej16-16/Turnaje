@@ -3,7 +3,7 @@
  */
 const Api = {
   // Unikátne vedro (bucket) pre tohto používateľa, odvodené z prostredia
-  BUCKET_URL: 'https://kvdb.io/kqTZd1BSAvBNEeHNBmAvK/data',
+  BUCKET_URL: 'https://kvdb.io/JtVaDRzhEtrcA6DQc7Cexj/data',
   LOCAL_KEY: 'futbal_tournaments_local',
   isOnlineMode: true,
 
