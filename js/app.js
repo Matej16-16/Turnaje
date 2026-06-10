@@ -1509,11 +1509,15 @@ const app = {
   },
 
   /**
-   * Admin: Uloženie všetkých zmien a nového rozpisu na API
+   * Admin: Uloženie všetkých zmien a nového rozpisu na API (Prelosovanie)
    */
   saveAdminTournamentEdit: async function() {
     const t = this.activeTournament;
     if (!t) return;
+
+    // Varovanie pred prelosovaním turnaja
+    const confirmed = confirm('POZOR: Chystáte sa PRELOSOVAŤ turnaj. Táto akcia vymaže všetky doterajšie zápasy, výsledky a strelcov! Chcete naozaj pokračovať?');
+    if (!confirmed) return;
 
     const name = document.getElementById('ae-name').value.trim();
     const location = document.getElementById('ae-location').value.trim();
@@ -1639,6 +1643,78 @@ const app = {
       if (btnSubmit) {
         btnSubmit.disabled = false;
         btnSubmit.innerText = 'Uložiť a prelosovať turnaj!';
+      }
+    }
+  },
+
+  /**
+   * Admin: Uloženie iba nastavení turnaja (bez prelosovania zápasov)
+   */
+  saveAdminSettingsOnly: async function() {
+    const t = this.activeTournament;
+    if (!t) return;
+
+    const name = document.getElementById('ae-name').value.trim();
+    const location = document.getElementById('ae-location').value.trim();
+    const date = document.getElementById('ae-date').value;
+    const category = document.getElementById('ae-category').value.trim();
+    const duration = parseInt(document.getElementById('ae-match-duration').value) || 15;
+    const lookingForTeams = document.getElementById('ae-looking-for-teams').checked;
+    const startTime = document.getElementById('ae-start-time').value || '09:00';
+    const interval = parseInt(document.getElementById('ae-interval').value) || 20;
+    const pitches = parseInt(document.getElementById('ae-pitches').value) || 1;
+    const description = document.getElementById('ae-description').value.trim();
+
+    if (!name || !location || !date) {
+      this.showToast('Vyplňte prosím všetky povinné polia (*)', 'warning');
+      return;
+    }
+
+    const btnSubmit = document.getElementById('btn-save-admin-settings-only');
+    if (btnSubmit) {
+      btnSubmit.disabled = true;
+      btnSubmit.innerText = 'Ukladám...';
+    }
+
+    // Prepočítame časy pre existujúce zápasy bez zmeny ich výsledkov alebo fáz
+    let updatedMatches = JSON.parse(JSON.stringify(t.matches));
+    updatedMatches = Utils.calculateScheduleTimes(
+      updatedMatches, 
+      startTime, 
+      interval, 
+      pitches, 
+      this.adminEditBreaks, 
+      duration
+    );
+
+    try {
+      const updated = await Api.updateTournamentDetails(this.activeTournamentId, {
+        name,
+        location,
+        date,
+        duration,
+        category,
+        lookingForTeams,
+        startTime,
+        interval,
+        pitches,
+        description,
+        teams: t.teams, // Ponecháme pôvodné tímy
+        matches: updatedMatches, // Aktualizované časy pre existujúce zápasy
+        breaks: this.adminEditBreaks, // Nové/upravené prestávky
+        sponsors: this.adminEditSponsors // Noví sponzori
+      }, this.currentAdminToken);
+
+      this.activeTournament = updated;
+      this.closeAdminEditModal();
+      this.renderTournamentUI(false);
+      this.showToast('Nastavenia turnaja boli úspešne uložené (zápasy neboli prelosované)!', 'success');
+    } catch (e) {
+      this.showToast('Chyba pri ukladaní nastavení: ' + e.message, 'error');
+    } finally {
+      if (btnSubmit) {
+        btnSubmit.disabled = false;
+        btnSubmit.innerText = 'Uložiť iba nastavenia';
       }
     }
   },
@@ -2080,6 +2156,7 @@ const app = {
 
     // Losovanie a odoslanie zmeny v admin modále
     bindClick('ae-btn-draw-shuffle', () => this.shuffleAdminDrawTeams());
+    bindClick('btn-save-admin-settings-only', () => this.saveAdminSettingsOnly());
     bindSubmit('admin-edit-tournament-form', (e) => {
       e.preventDefault();
       this.saveAdminTournamentEdit();

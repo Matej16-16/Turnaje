@@ -330,7 +330,7 @@ const Api = {
     const response = await fetch(this.BUCKET_URL, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'text/plain'
       },
       body: JSON.stringify(data)
     });
