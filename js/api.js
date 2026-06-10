@@ -36,14 +36,27 @@ const Api = {
           return [];
         }
         
+        let tournaments = [];
         // Ošetrenie, ak by Firebase vrátil objekt s číselnými kľúčmi namiesto poľa
         if (Array.isArray(data)) {
-          return data.filter(item => item !== null);
+          tournaments = data.filter(item => item !== null);
         } else if (typeof data === 'object') {
-          return Object.values(data);
+          tournaments = Object.values(data);
         }
         
-        return [];
+        // Firebase odstraňuje null hodnoty z JSONu, preto ich tu zrekonštruujeme pre kompatibilitu v celej aplikácii
+        tournaments.forEach(t => {
+          if (t && t.matches && Array.isArray(t.matches)) {
+            t.matches.forEach(m => {
+              if (m.score1 === undefined) m.score1 = null;
+              if (m.score2 === undefined) m.score2 = null;
+              if (m.team1 === undefined) m.team1 = null;
+              if (m.team2 === undefined) m.team2 = null;
+            });
+          }
+        });
+        
+        return tournaments;
       } catch (e) {
         console.warn('Chyba pri online načítaní z Firebase, prechádzam do offline:', e);
         this.isOnlineMode = false;
