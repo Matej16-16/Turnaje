@@ -11,23 +11,12 @@ const Api = {
    * Zistí stav pripojenia a otestuje KVdb
    */
   checkConnection: async function() {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 sekundy timeout
-      
-      const response = await fetch(this.BUCKET_URL, { 
-        method: 'GET',
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      this.isOnlineMode = true;
-      return true;
-    } catch (e) {
-      console.warn('Prepínam do offline režimu kvôli chybe pripojenia:', e);
-      this.isOnlineMode = false;
-      return false;
+    if (navigator && typeof navigator.onLine === 'boolean') {
+      this.isOnlineMode = navigator.onLine;
+      return navigator.onLine;
     }
+    this.isOnlineMode = true;
+    return true;
   },
 
   /**
@@ -48,7 +37,19 @@ const Api = {
         const data = await response.json();
         return Array.isArray(data) ? data : [];
       } catch (e) {
-        console.error('Chyba pri online načítaní, používam localStorage:', e);
+        console.warn('Chyba pri online načítaní, pokúšam sa o inicializáciu:', e);
+        
+        if (navigator.onLine) {
+          try {
+            // Ak sme online, ale dostali sme chybu (CORS 404), inicializujeme kľúč prázdnym polom
+            await this._saveOnline([]);
+            this.isOnlineMode = true;
+            return [];
+          } catch (initErr) {
+            console.error('Inicializácia zlyhala, prechádzam do offline:', initErr);
+          }
+        }
+        
         this.isOnlineMode = false;
         return this._loadLocal();
       }
