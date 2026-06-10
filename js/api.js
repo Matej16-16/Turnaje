@@ -1,14 +1,14 @@
 /**
- * API klient pre správu turnajov (Online KVdb s LocalStorage fallbackom)
+ * API klient pre správu turnajov (Online Google Firebase Realtime Database s LocalStorage fallbackom)
  */
 const Api = {
-  // Unikátne vedro (bucket) pre tohto používateľa, odvodené z prostredia
-  BUCKET_URL: 'https://kvdb.io/JtVaDRzhEtrcA6DQc7Cexj/data',
+  // TU VLOŽTE SVOJU URL ADRESU Z GOOGLE FIREBASE REALTIME DATABASE (musí končiť /tournaments.json)
+  FIREBASE_URL: 'https://futbal-turnaje-default-rtdb.europe-west1.firebasedatabase.app/tournaments.json',
   LOCAL_KEY: 'futbal_tournaments_local',
   isOnlineMode: true,
 
   /**
-   * Zistí stav pripojenia a otestuje KVdb
+   * Zistí stav pripojenia
    */
   checkConnection: async function() {
     if (navigator && typeof navigator.onLine === 'boolean') {
@@ -20,36 +20,32 @@ const Api = {
   },
 
   /**
-   * Získa zoznam všetkých turnajov
+   * Získa zoznam všetkých turnajov z Firebase alebo LocalStorage fallbacku
    */
   getAllTournaments: async function() {
     await this.checkConnection();
 
     if (this.isOnlineMode) {
       try {
-        const response = await fetch(this.BUCKET_URL);
-        if (response.status === 404) {
-          // Ak kľúč ešte neexistuje, inicializujeme ho prázdnym polom
-          await this._saveOnline([]);
+        const response = await fetch(this.FIREBASE_URL);
+        if (!response.ok) throw new Error('Chyba servera pri načítaní z Firebase');
+        const data = await response.json();
+        
+        // Firebase vráti null, ak databáza neobsahuje žiadne dáta
+        if (data === null) {
           return [];
         }
-        if (!response.ok) throw new Error('Chyba servera pri načítaní');
-        const data = await response.json();
-        return Array.isArray(data) ? data : [];
-      } catch (e) {
-        console.warn('Chyba pri online načítaní, pokúšam sa o inicializáciu:', e);
         
-        if (navigator.onLine) {
-          try {
-            // Ak sme online, ale dostali sme chybu (CORS 404), inicializujeme kľúč prázdnym polom
-            await this._saveOnline([]);
-            this.isOnlineMode = true;
-            return [];
-          } catch (initErr) {
-            console.error('Inicializácia zlyhala, prechádzam do offline:', initErr);
-          }
+        // Ošetrenie, ak by Firebase vrátil objekt s číselnými kľúčmi namiesto poľa
+        if (Array.isArray(data)) {
+          return data.filter(item => item !== null);
+        } else if (typeof data === 'object') {
+          return Object.values(data);
         }
         
+        return [];
+      } catch (e) {
+        console.warn('Chyba pri online načítaní z Firebase, prechádzam do offline:', e);
         this.isOnlineMode = false;
         return this._loadLocal();
       }
@@ -325,18 +321,18 @@ const Api = {
   },
 
   /**
-   * Uloží dáta na KVdb server
+   * Uloží dáta do Google Firebase Realtime Database
    */
   _saveOnline: async function(data) {
-    const response = await fetch(this.BUCKET_URL, {
-      method: 'POST',
+    const response = await fetch(this.FIREBASE_URL, {
+      method: 'PUT',
       headers: {
-        'Content-Type': 'text/plain'
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify(data)
     });
     if (!response.ok) {
-      throw new Error('Chyba pri odosielaní dát na server.');
+      throw new Error('Chyba pri odosielaní dát na Firebase server.');
     }
   },
 
