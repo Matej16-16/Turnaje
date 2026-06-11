@@ -198,6 +198,7 @@ const app = {
     const searchQuery = document.getElementById('search-input').value.toLowerCase().trim();
     const categoryQuery = document.getElementById('category-filter') ? document.getElementById('category-filter').value.toLowerCase().trim() : '';
     const formatFilter = document.getElementById('format-filter').value;
+    const statusFilter = document.getElementById('status-filter') ? document.getElementById('status-filter').value : 'all';
     const grid = document.getElementById('tournaments-grid');
     const noTournaments = document.getElementById('no-tournaments');
 
@@ -215,10 +216,28 @@ const app = {
       } else if (formatFilter === 'knockout') {
         matchesFormat = t.format === 'knockout';
       } else if (formatFilter === 'groups') {
-        matchesFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2'].includes(t.format);
+        matchesFormat = ['groups_2_top2', 'groups_2_all', 'groups_4_top2', 'groups_2_top4', 'groups_4_all'].includes(t.format);
       }
       
-      return matchesSearch && matchesFormat && matchesCategory;
+      let matchesStatus = true;
+      if (statusFilter !== 'all') {
+        const totalMatches = t.matches ? t.matches.length : 0;
+        const finishedMatches = t.matches ? t.matches.filter(m => m.status === 'finished').length : 0;
+        const liveMatches = t.matches ? t.matches.filter(m => m.status === 'live').length : 0;
+        
+        let calculatedStatus = 'scheduled';
+        if (liveMatches > 0) {
+          calculatedStatus = 'live';
+        } else if (finishedMatches === totalMatches && totalMatches > 0) {
+          calculatedStatus = 'finished';
+        } else if (finishedMatches > 0) {
+          calculatedStatus = 'live'; // prebieha / naživo
+        }
+        
+        matchesStatus = calculatedStatus === statusFilter;
+      }
+      
+      return matchesSearch && matchesFormat && matchesCategory && matchesStatus;
     });
 
     grid.innerHTML = '';
@@ -238,6 +257,8 @@ const app = {
   // ==========================================
   
   wizardTeams: [], // Zoznam tímov počas tvorby
+  wizardCurrentTeamLogo: null,
+  adminCurrentTeamLogo: null,
 
   resetWizard: function() {
     // Krok 1
@@ -247,6 +268,13 @@ const app = {
     this.wizardBreaks = [];
     this.draggedTeamIdx = null;
     this.wizardSponsors = [];
+    this.wizardCurrentTeamLogo = null;
+    const wizardLogoInput = document.getElementById('team-logo-input');
+    if (wizardLogoInput) wizardLogoInput.value = '';
+    const wizardLogoFilename = document.getElementById('team-logo-filename');
+    if (wizardLogoFilename) wizardLogoFilename.innerText = 'Žiadne logo nevybrané';
+    const wizardClearLogoBtn = document.getElementById('btn-clear-team-logo');
+    if (wizardClearLogoBtn) wizardClearLogoBtn.classList.add('hidden');
     this.updateTeamsListUI();
     this.updateWizardSponsorsListUI();
 
@@ -312,10 +340,18 @@ const app = {
     this.wizardTeams.push({
       id: 'team_' + Utils.generateId(),
       name: name,
-      emoji: emoji
+      emoji: emoji,
+      logo: this.wizardCurrentTeamLogo || null
     });
 
     nameInput.value = '';
+    this.wizardCurrentTeamLogo = null;
+    const logoInput = document.getElementById('team-logo-input');
+    if (logoInput) logoInput.value = '';
+    const logoFilename = document.getElementById('team-logo-filename');
+    if (logoFilename) logoFilename.innerText = 'Žiadne logo nevybrané';
+    const clearLogoBtn = document.getElementById('btn-clear-team-logo');
+    if (clearLogoBtn) clearLogoBtn.classList.add('hidden');
     
     // Vyberieme náhodné emoji pre ďalší vstup
     const options = emojiSelect.options;
@@ -343,10 +379,13 @@ const app = {
     }
 
     this.wizardTeams.forEach(team => {
+      const logoHtml = team.logo 
+        ? `<img src="${team.logo}" class="team-logo-img" alt="${team.name}"/>` 
+        : `<span class="team-item-emoji">${team.emoji}</span>`;
       list.innerHTML += `
         <div class="team-item">
           <div class="team-item-info">
-            <span class="team-item-emoji">${team.emoji}</span>
+            ${logoHtml}
             <span class="team-item-name" title="${team.name}">${team.name}</span>
           </div>
           <button type="button" class="btn-remove-team" onclick="app.removeTeam('${team.id}')">&times;</button>
@@ -1010,12 +1049,15 @@ const app = {
     // Tlačidlo vymazania turnaja a editácie (iba ak sme admin)
     const btnDelete = document.getElementById('btn-delete-tournament');
     const btnEditDetails = document.getElementById('btn-edit-tournament-details');
+    const btnExport = document.getElementById('btn-export-schedule');
     if (isOrganizer) {
       if (btnDelete) btnDelete.classList.remove('hidden');
       if (btnEditDetails) btnEditDetails.classList.remove('hidden');
+      if (btnExport) btnExport.classList.remove('hidden');
     } else {
       if (btnDelete) btnDelete.classList.add('hidden');
       if (btnEditDetails) btnEditDetails.classList.add('hidden');
+      if (btnExport) btnExport.classList.add('hidden');
     }
 
     // ADMINISTRÁTORSKÝ PANEL / BADGE
@@ -1110,6 +1152,60 @@ const app = {
       const scorers = this.calculateTournamentScorers(t);
       tabScorersContent.innerHTML = Components.renderScorersTable(scorers);
     }
+  },
+
+  /**
+   * Export rozpisu zápasov do Excelu (CSV s UTF-8 BOM a oddelením ;)
+   */
+  exportScheduleToExcel: function() {
+    const t = this.activeTournament;
+    if (!t) return;
+
+    let csvContent = "sep=;\n";
+    // Hlavička
+    csvContent += "Zápas ID;Kolo;Čas;Ihrisko;Tím 1;Skóre 1;Skóre 2;Tím 2;Stav;Strelci\n";
+
+    t.matches.forEach(m => {
+      const matchId = m.id.replace('m_', '').replace('p_sf_', 'SF ').replace('p_qf_', 'ŠF ').replace('p_f_', 'Finále ');
+      const round = m.stage === 'group' ? `Skupina ${m.group} - Kolo ${m.round}` : (m.roundName || `Kolo ${m.round || ''}`);
+      const time = m.time || '-';
+      const pitch = m.pitch || 'Ihrisko 1';
+      const team1 = m.team1 ? m.team1.name : 'Čaká sa na súperov';
+      const team2 = m.team2 ? m.team2.name : 'Čaká sa na súperov';
+      const score1 = m.score1 !== null ? m.score1 : '-';
+      const score2 = m.score2 !== null ? m.score2 : '-';
+      
+      let status = 'Plánovaný';
+      if (m.status === 'live') status = 'NAŽIVO';
+      else if (m.status === 'finished') status = 'Ukončený';
+
+      // Strelci
+      let scorers = [];
+      if (m.scorers) {
+        if (m.scorers.team1) {
+          m.scorers.team1.forEach(s => scorers.push(`${s.name} (${s.min}') [${team1}]`));
+        }
+        if (m.scorers.team2) {
+          m.scorers.team2.forEach(s => scorers.push(`${s.name} (${s.min}') [${team2}]`));
+        }
+      }
+      const scorersText = scorers.join(', ');
+
+      csvContent += `${matchId};"${round}";"${time}";"${pitch}";"${team1}";${score1};${score2};"${team2}";"${status}";"${scorersText}"\n`;
+    });
+
+    // Stiahnutie súboru s UTF-8 BOM pre správne zobrazenie diakritiky v slovenskom Exceli
+    const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    const fileName = `Rozpis_zapasov_${t.name.replace(/[^a-z0-9]/gi, '_')}.csv`;
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    this.showToast('Rozpis zápasov bol úspešne exportovaný!', 'success');
   },
 
   /**
@@ -1209,6 +1305,13 @@ const app = {
     this.adminEditTeams = JSON.parse(JSON.stringify(t.teams || []));
     this.adminEditBreaks = JSON.parse(JSON.stringify(t.breaks || []));
     this.adminEditSponsors = JSON.parse(JSON.stringify(t.sponsors || []));
+    this.adminCurrentTeamLogo = null;
+    const adminLogoInput = document.getElementById('ae-team-logo-input');
+    if (adminLogoInput) adminLogoInput.value = '';
+    const adminLogoFilename = document.getElementById('ae-team-logo-filename');
+    if (adminLogoFilename) adminLogoFilename.innerText = 'Žiadne logo nevybrané';
+    const adminClearLogoBtn = document.getElementById('ae-btn-clear-team-logo');
+    if (adminClearLogoBtn) adminClearLogoBtn.classList.add('hidden');
     
     // Zobrazenie tímov a prelosovania
     this.updateAdminSponsorsListUI();
@@ -1248,10 +1351,18 @@ const app = {
     this.adminEditTeams.push({
       id: 'team_' + Utils.generateId(),
       name: name,
-      emoji: emoji
+      emoji: emoji,
+      logo: this.adminCurrentTeamLogo || null
     });
 
     nameInput.value = '';
+    this.adminCurrentTeamLogo = null;
+    const adminLogoInput = document.getElementById('ae-team-logo-input');
+    if (adminLogoInput) adminLogoInput.value = '';
+    const adminLogoFilename = document.getElementById('ae-team-logo-filename');
+    if (adminLogoFilename) adminLogoFilename.innerText = 'Žiadne logo nevybrané';
+    const adminClearLogoBtn = document.getElementById('ae-btn-clear-team-logo');
+    if (adminClearLogoBtn) adminClearLogoBtn.classList.add('hidden');
     
     // Vyberieme náhodné emoji
     const options = emojiSelect.options;
@@ -1288,10 +1399,13 @@ const app = {
     }
 
     this.adminEditTeams.forEach(team => {
+      const logoHtml = team.logo 
+        ? `<img src="${team.logo}" class="team-logo-img" alt="${team.name}"/>` 
+        : `<span class="team-item-emoji">${team.emoji}</span>`;
       list.innerHTML += `
         <div class="team-item">
           <div class="team-item-info">
-            <span class="team-item-emoji">${team.emoji}</span>
+            ${logoHtml}
             <span class="team-item-name" title="${team.name}">${team.name}</span>
           </div>
           <button type="button" class="btn-remove-team" onclick="app.removeAdminTeam('${team.id}')">&times;</button>
@@ -2038,6 +2152,49 @@ const app = {
     bindEvent('search-input', 'input', () => this.applyFilters());
     bindEvent('category-filter', 'input', () => this.applyFilters());
     bindEvent('format-filter', 'change', () => this.applyFilters());
+    bindEvent('status-filter', 'change', () => this.applyFilters());
+
+    // Export rozpisu pre admina
+    bindClick('btn-export-schedule', () => this.exportScheduleToExcel());
+
+    // Nahrávanie loga pre tímy
+    bindEvent('team-logo-input', 'change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        Utils.resizeImage(file, 80, 80, (base64) => {
+          this.wizardCurrentTeamLogo = base64;
+          document.getElementById('team-logo-filename').innerText = file.name;
+          document.getElementById('btn-clear-team-logo').classList.remove('hidden');
+        });
+      }
+    });
+
+    bindClick('btn-clear-team-logo', () => {
+      this.wizardCurrentTeamLogo = null;
+      const logoInput = document.getElementById('team-logo-input');
+      if (logoInput) logoInput.value = '';
+      document.getElementById('team-logo-filename').innerText = 'Žiadne logo nevybrané';
+      document.getElementById('btn-clear-team-logo').classList.add('hidden');
+    });
+
+    bindEvent('ae-team-logo-input', 'change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        Utils.resizeImage(file, 80, 80, (base64) => {
+          this.adminCurrentTeamLogo = base64;
+          document.getElementById('ae-team-logo-filename').innerText = file.name;
+          document.getElementById('ae-btn-clear-team-logo').classList.remove('hidden');
+        });
+      }
+    });
+
+    bindClick('ae-btn-clear-team-logo', () => {
+      this.adminCurrentTeamLogo = null;
+      const logoInput = document.getElementById('ae-team-logo-input');
+      if (logoInput) logoInput.value = '';
+      document.getElementById('ae-team-logo-filename').innerText = 'Žiadne logo nevybrané';
+      document.getElementById('ae-btn-clear-team-logo').classList.add('hidden');
+    });
 
     // Tvorca turnaja - Wizard tlačidlá
     bindClick('btn-next-to-teams', () => this.nextToTeams());

@@ -1,5 +1,5 @@
 /**
- * UI Komponenty pre FutbalTurnaje.sk
+ * UI Komponenty pre Turnajnet.sk
  */
 const Components = {
   /**
@@ -122,10 +122,10 @@ const Components = {
         <tr class="${rowClass}">
           <td class="rank-num">${index + 1}.</td>
           <td>
-            <div class="team-cell">
-              <span class="team-emoji">${row.team.emoji || '⚽'}</span>
-              <span>${row.team.name}</span>
-            </div>
+             <div class="team-cell">
+               ${row.team.logo ? `<img src="${row.team.logo}" class="team-logo-img" alt="${row.team.name}"/>` : `<span class="team-emoji">${row.team.emoji || '⚽'}</span>`}
+               <span>${row.team.name}</span>
+             </div>
           </td>
           <td class="txt-center">${row.played}</td>
           <td class="txt-center text-success">${row.wins}</td>
@@ -187,10 +187,10 @@ const Components = {
             <tr class="${rowClass}">
               <td class="rank-num">${index + 1}.</td>
               <td>
-                <div class="team-cell">
-                  <span class="team-emoji">${row.team.emoji || '⚽'}</span>
-                  <span>${row.team.name}</span>
-                </div>
+                 <div class="team-cell">
+                   ${row.team.logo ? `<img src="${row.team.logo}" class="team-logo-img" alt="${row.team.name}"/>` : `<span class="team-emoji">${row.team.emoji || '⚽'}</span>`}
+                   <span>${row.team.name}</span>
+                 </div>
               </td>
               <td class="txt-center">${row.played}</td>
               <td class="txt-center text-success">${row.wins}</td>
@@ -294,25 +294,25 @@ const Components = {
           <span class="mc-status ${statusClass}">${statusText}</span>
         </div>
         <div class="mc-body">
-          <div class="mc-team team-home">
-            <span class="mc-team-emoji">${match.team1 ? (match.team1.emoji || '⚽') : '❓'}</span>
-            <span class="mc-team-name" title="${match.team1 ? match.team1.name : 'Čaká sa na súpera'}">
-              ${match.team1 ? match.team1.name : 'Čaká sa na súpera'}
-            </span>
-          </div>
-          
-          <div class="mc-score-area">
-            <div class="mc-score ${match.score1 === null ? 'score-empty' : ''}">${score1Text}</div>
-            <span class="mc-vs">:</span>
-            <div class="mc-score ${match.score2 === null ? 'score-empty' : ''}">${score2Text}</div>
-          </div>
-
-          <div class="mc-team team-away">
-            <span class="mc-team-name" title="${match.team2 ? match.team2.name : 'Čaká sa na súpera'}">
-              ${match.team2 ? match.team2.name : 'Čaká sa na súpera'}
-            </span>
-            <span class="mc-team-emoji">${match.team2 ? (match.team2.emoji || '⚽') : '❓'}</span>
-          </div>
+           <div class="mc-team team-home">
+             ${match.team1 ? (match.team1.logo ? `<img src="${match.team1.logo}" class="team-logo-img" alt="${match.team1.name}"/>` : `<span class="mc-team-emoji">${match.team1.emoji || '⚽'}</span>`) : `<span class="mc-team-emoji">❓</span>`}
+             <span class="mc-team-name" title="${match.team1 ? match.team1.name : 'Čaká sa na súpera'}">
+               ${match.team1 ? match.team1.name : 'Čaká sa na súpera'}
+             </span>
+           </div>
+           
+           <div class="mc-score-area">
+             <div class="mc-score ${match.score1 === null ? 'score-empty' : ''}">${score1Text}</div>
+             <span class="mc-vs">:</span>
+             <div class="mc-score ${match.score2 === null ? 'score-empty' : ''}">${score2Text}</div>
+           </div>
+ 
+           <div class="mc-team team-away">
+             <span class="mc-team-name" title="${match.team2 ? match.team2.name : 'Čaká sa na súpera'}">
+               ${match.team2 ? match.team2.name : 'Čaká sa na súpera'}
+             </span>
+             ${match.team2 ? (match.team2.logo ? `<img src="${match.team2.logo}" class="team-logo-img" alt="${match.team2.name}"/>` : `<span class="mc-team-emoji">${match.team2.emoji || '⚽'}</span>`) : `<span class="mc-team-emoji">❓</span>`}
+           </div>
         </div>
         ${eventsHtml}
         ${editBtnHtml}
@@ -381,24 +381,23 @@ const Components = {
               <span>Zápas ${match.id.replace('m_', '#').replace('p_sf_', 'SF ').replace('p_qf_', 'ŠF ').replace('p_f_', 'Finále ')}${timePitchText}</span>
               ${liveBadge}
             </div>
-            
-            <!-- Domáci tím (Team 1) -->
-            <div class="bm-team-row ${winnerSide === 'team1' ? 'winner' : ''}">
-              <div class="bm-team-info">
-                <span>${match.team1 ? (match.team1.emoji || '⚽') : '❓'}</span>
-                <span class="bm-team-name">${match.team1 ? match.team1.name : 'Postupujúci'}</span>
-              </div>
-              <span class="bm-team-score">${score1Html}</span>
-            </div>
-
-            <!-- Hostia (Team 2) -->
-            <div class="bm-team-row ${winnerSide === 'team2' ? 'winner' : ''}">
-              <div class="bm-team-info">
-                <span>${match.team2 ? (match.team2.emoji || '⚽') : '❓'}</span>
-                <span class="bm-team-name">${match.team2 ? match.team2.name : 'Postupujúci'}</span>
-              </div>
-              <span class="bm-team-score">${score2Html}</span>
-            </div>
+                        <!-- Domáci tím (Team 1) -->
+             <div class="bm-team-row ${winnerSide === 'team1' ? 'winner' : ''}">
+               <div class="bm-team-info">
+                 <span>${match.team1 ? (match.team1.logo ? `<img src="${match.team1.logo}" class="team-logo-img" alt="${match.team1.name}"/>` : match.team1.emoji || '⚽') : '❓'}</span>
+                 <span class="bm-team-name">${match.team1 ? match.team1.name : 'Postupujúci'}</span>
+               </div>
+               <span class="bm-team-score">${score1Html}</span>
+             </div>
+ 
+             <!-- Hostia (Team 2) -->
+             <div class="bm-team-row ${winnerSide === 'team2' ? 'winner' : ''}">
+               <div class="bm-team-info">
+                 <span>${match.team2 ? (match.team2.logo ? `<img src="${match.team2.logo}" class="team-logo-img" alt="${match.team2.name}"/>` : match.team2.emoji || '⚽') : '❓'}</span>
+                 <span class="bm-team-name">${match.team2 ? match.team2.name : 'Postupujúci'}</span>
+               </div>
+               <span class="bm-team-score">${score2Html}</span>
+             </div>
 
             ${editOverlay}
           </div>
