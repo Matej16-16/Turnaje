@@ -52,6 +52,12 @@ const Api = {
               if (m.score2 === undefined) m.score2 = null;
               if (m.team1 === undefined) m.team1 = null;
               if (m.team2 === undefined) m.team2 = null;
+              if (m.scorers === undefined || m.scorers === null) {
+                m.scorers = { team1: [], team2: [] };
+              } else {
+                if (m.scorers.team1 === undefined || m.scorers.team1 === null) m.scorers.team1 = [];
+                if (m.scorers.team2 === undefined || m.scorers.team2 === null) m.scorers.team2 = [];
+              }
             });
           }
         });
