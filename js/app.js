@@ -1968,8 +1968,8 @@ const app = {
 
     // Kopírujeme existujúcich strelcov do dočasného poľa
     this.tempScorers = {
-      team1: match.scorers ? [...match.scorers.team1] : [],
-      team2: match.scorers ? [...match.scorers.team2] : []
+      team1: (match.scorers && Array.isArray(match.scorers.team1)) ? [...match.scorers.team1] : [],
+      team2: (match.scorers && Array.isArray(match.scorers.team2)) ? [...match.scorers.team2] : []
     };
 
     this.updateModalScorersListUI();
